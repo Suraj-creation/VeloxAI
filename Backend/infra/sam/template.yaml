@@ -1,0 +1,97 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: FootWatch backend local SAM scaffold
+
+Parameters:
+	StageName:
+		Type: String
+		Default: dev
+
+Globals:
+	Function:
+		Runtime: python3.11
+		Timeout: 20
+		MemorySize: 512
+		Environment:
+			Variables:
+				FW_ENV: !Ref StageName
+				FW_REGION: !Ref AWS::Region
+
+Resources:
+	HttpApi:
+		Type: AWS::Serverless::HttpApi
+		Properties:
+			StageName: !Ref StageName
+
+	ViolationDlq:
+		Type: AWS::SQS::Queue
+		Properties:
+			QueueName: !Sub footwatch-${StageName}-violation-dlq
+
+	ViolationQueue:
+		Type: AWS::SQS::Queue
+		Properties:
+			QueueName: !Sub footwatch-${StageName}-violation-ingest-queue
+			RedrivePolicy:
+				deadLetterTargetArn: !GetAtt ViolationDlq.Arn
+				maxReceiveCount: 5
+
+	IngestFunction:
+		Type: AWS::Serverless::Function
+		Properties:
+			FunctionName: !Sub footwatch-${StageName}-ingest-api
+			CodeUri: ../../
+			Handler: services.ingest_api.lambda_handler.handler
+			Policies:
+				- AWSLambdaBasicExecutionRole
+			Events:
+				IngestProxy:
+					Type: HttpApi
+					Properties:
+						ApiId: !Ref HttpApi
+						Path: /ingest/{proxy+}
+						Method: ANY
+
+	QueryFunction:
+		Type: AWS::Serverless::Function
+		Properties:
+			FunctionName: !Sub footwatch-${StageName}-query-api
+			CodeUri: ../../
+			Handler: services.query_api.lambda_handler.handler
+			Policies:
+				- AWSLambdaBasicExecutionRole
+			Events:
+				QueryProxy:
+					Type: HttpApi
+					Properties:
+						ApiId: !Ref HttpApi
+						Path: /query/{proxy+}
+						Method: ANY
+
+	WorkerFunction:
+		Type: AWS::Serverless::Function
+		Properties:
+			FunctionName: !Sub footwatch-${StageName}-worker
+			CodeUri: ../../
+			Handler: services.workers.process_violation_queue.lambda_handler.handler
+			Timeout: 60
+			MemorySize: 1024
+			Policies:
+				- AWSLambdaBasicExecutionRole
+				- SQSPollerPolicy:
+						QueueName: !GetAtt ViolationQueue.QueueName
+			Events:
+				ViolationQueueEvent:
+					Type: SQS
+					Properties:
+						Queue: !GetAtt ViolationQueue.Arn
+						BatchSize: 10
+
+Outputs:
+	HttpApiBaseUrl:
+		Description: Base URL for local/cloud HTTP API
+		Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}
+	IngestPath:
+		Value: /ingest
+	QueryPath:
+		Value: /query

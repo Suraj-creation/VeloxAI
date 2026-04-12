@@ -36,6 +36,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 MODELS_DIR = PROJECT_ROOT / "models"
 CONFIG_DIR = PROJECT_ROOT / "config"
 VIOLATIONS_DIR = PROJECT_ROOT / "violations"
+FRONTEND_LAB_CONFIG = CONFIG_DIR / "frontend_camera_lab.json"
 
 TWO_WHEELER_MODEL = MODELS_DIR / "twowheeler_yolov8n.pt"
 LP_MODEL = MODELS_DIR / "lp_localiser.pt"
@@ -155,6 +156,8 @@ def ensure_state() -> None:
         st.session_state.camera_stream = None
     if "latest_frame_at" not in st.session_state:
         st.session_state.latest_frame_at = 0.0
+    if "preview_export_at" not in st.session_state:
+        st.session_state.preview_export_at = 0.0
 
 
 def release_camera() -> None:
@@ -332,6 +335,23 @@ def export_metrics(stats: dict[str, Any], elapsed_ms: float) -> None:
         with temp_file.open("w", encoding="utf-8") as f:
             json.dump(metrics, f)
         temp_file.replace(metrics_file)
+    except Exception:
+        pass
+
+
+def export_preview_frame(frame: np.ndarray, min_interval_sec: float = 0.4) -> None:
+    now = time.time()
+    last = float(st.session_state.get("preview_export_at", 0.0))
+    if now - last < min_interval_sec:
+        return
+
+    frame_path = PROJECT_ROOT / ".preview_annotated.jpg"
+    temp_path = PROJECT_ROOT / ".preview_annotated.tmp.jpg"
+    try:
+        ok = cv2.imwrite(str(temp_path), frame)
+        if ok:
+            temp_path.replace(frame_path)
+            st.session_state.preview_export_at = now
     except Exception:
         pass
 
@@ -575,6 +595,7 @@ def main() -> None:
         CONFIG_DIR / "dashboard.json",
         {"mqtt_host": "localhost", "mqtt_port": 1883, "mqtt_topic": "footpath/violations"},
     )
+    lab_cfg = load_json(FRONTEND_LAB_CONFIG, {})
 
     model_options: dict[str, Path] = {}
     if GENERAL_MODEL.exists():
@@ -588,28 +609,67 @@ def main() -> None:
 
     with st.sidebar:
         st.header("Runtime Controls")
-        mode = st.selectbox("Mode", ["General Detection", "Footpath Enforcement"], index=1)
+        mode_default = "Footpath Enforcement"
+        if str(lab_cfg.get("enablePlatePipeline", True)).lower() in {"false", "0", "no"}:
+            mode_default = "General Detection"
+        mode_options = ["General Detection", "Footpath Enforcement"]
+        mode = st.selectbox("Mode", mode_options, index=mode_options.index(mode_default))
         detector_label = st.selectbox("Detection Model", options=list(model_options.keys()), index=0)
-        camera_index = int(st.number_input("Camera Index", min_value=0, max_value=10, value=0, step=1))
-        width = int(st.number_input("Camera Width", min_value=320, max_value=1920, value=1280, step=160))
-        height = int(st.number_input("Camera Height", min_value=240, max_value=1080, value=720, step=120))
+        source_mode = str(lab_cfg.get("sourceMode", "device")).strip().lower()
+        source_value = str(lab_cfg.get("sourceValue", "0"))
+        camera_index_default = int(source_value) if source_value.isdigit() else 0
+        width_default = int(lab_cfg.get("previewWidth", 1280) or 1280)
+        height_default = int(lab_cfg.get("previewHeight", 720) or 720)
+        conf_default = float(lab_cfg.get("detectionConfidence", 0.35) or 0.35)
+        fps_default = int(lab_cfg.get("targetFps", 12) or 12)
+        speed_default = float(lab_cfg.get("speedThresholdKmph", 5.0) or 5.0)
+        cooldown_default = int(lab_cfg.get("cooldownSec", 60) or 60)
+        min_ocr_default = float(lab_cfg.get("minOcrConfidence", 0.65) or 0.65)
 
-        conf = st.slider("Detection Confidence", min_value=0.10, max_value=0.95, value=0.35, step=0.05)
-        fps_limit = st.slider("Frame Rate Limit", min_value=2, max_value=30, value=12, step=1)
+        follow_frontend_camera = st.toggle(
+            "Follow Frontend Camera Selection",
+            value=True,
+            help="When enabled, Camera Index tracks frontend Camera Lab Source Value automatically.",
+        )
+
+        if source_mode == "device" and follow_frontend_camera:
+            desired_camera_index = max(0, min(10, camera_index_default))
+            current_camera_index = int(st.session_state.get("camera_index", desired_camera_index))
+            if current_camera_index != desired_camera_index:
+                st.session_state["camera_index"] = desired_camera_index
+                release_camera()
+            elif "camera_index" not in st.session_state:
+                st.session_state["camera_index"] = desired_camera_index
+
+        if source_mode == "device":
+            st.caption(f"Frontend source camera index: {source_value}")
+        else:
+            st.caption("Frontend source mode is RTSP. Camera Index applies only to local device mode.")
+
+        camera_index = int(st.number_input("Camera Index", min_value=0, max_value=10, step=1, key="camera_index"))
+        width = int(st.number_input("Camera Width", min_value=320, max_value=1920, value=max(320, min(1920, width_default)), step=160))
+        height = int(st.number_input("Camera Height", min_value=240, max_value=1080, value=max(240, min(1080, height_default)), step=120))
+
+        conf = st.slider("Detection Confidence", min_value=0.10, max_value=0.95, value=max(0.10, min(0.95, conf_default)), step=0.05)
+        fps_limit = st.slider("Frame Rate Limit", min_value=2, max_value=30, value=max(2, min(30, fps_default)), step=1)
         max_frame_failures = int(st.slider("Max Consecutive Frame Failures", min_value=2, max_value=30, value=8, step=1))
 
         st.subheader("Enforcement")
         st.caption("ROI boundary filtering is disabled. The full frame is treated as the enforcement zone.")
-        speed_threshold_kmph = st.slider("Speed Threshold (km/h)", min_value=1.0, max_value=20.0, value=5.0, step=0.5)
-        cooldown_sec = int(st.slider("Per-Track Challan Cooldown (sec)", min_value=10, max_value=300, value=60, step=5))
-        min_ocr_conf = st.slider("Minimum OCR Confidence", min_value=0.30, max_value=0.95, value=0.65, step=0.05)
+        speed_threshold_kmph = st.slider("Speed Threshold (km/h)", min_value=1.0, max_value=20.0, value=max(1.0, min(20.0, speed_default)), step=0.5)
+        cooldown_sec = int(st.slider("Per-Track Challan Cooldown (sec)", min_value=10, max_value=300, value=max(10, min(300, cooldown_default)), step=5))
+        min_ocr_conf = st.slider("Minimum OCR Confidence", min_value=0.30, max_value=0.95, value=max(0.30, min(0.95, min_ocr_default)), step=0.05)
 
         plate_possible = LP_MODEL.exists() and PADDLEOCR_AVAILABLE
         if not LP_MODEL.exists():
             st.warning("Plate detector missing: models/lp_localiser.pt")
         if not PADDLEOCR_AVAILABLE:
             st.warning("paddleocr not installed; plate OCR disabled.")
-        enable_plate_pipeline = st.toggle("Enable Plate Detection + OCR", value=plate_possible, disabled=not plate_possible)
+        enable_plate_pipeline = st.toggle(
+            "Enable Plate Detection + OCR",
+            value=bool(lab_cfg.get("enablePlatePipeline", plate_possible)) if plate_possible else False,
+            disabled=not plate_possible,
+        )
 
         mqtt_possible = PAHO_AVAILABLE
         if not mqtt_possible:
@@ -721,6 +781,7 @@ def main() -> None:
     stats["inference_fps"] = round(1.0 / elapsed, 1)
 
     render_frame(frame_slot, annotated)
+    export_preview_frame(annotated)
     display_stats = {k: v for k, v in stats.items() if k != "class_counts"}
     stats_slot.success(" | ".join([f"{k}: {v}" for k, v in display_stats.items()]))
 

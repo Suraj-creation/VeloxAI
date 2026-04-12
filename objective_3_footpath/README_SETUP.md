@@ -41,3 +41,18 @@ PowerShell -ExecutionPolicy Bypass -File .\\scripts\\run_streamlit.ps1
 Then open:
 
 http://localhost:8501
+
+## Backend Integration Sync (Local E2E)
+
+When running local Backend ingest API on port 8000, you can push telemetry and saved violations
+from this edge workspace into Backend using:
+
+```powershell
+PowerShell -ExecutionPolicy Bypass -File .\scripts\run_backend_sync.ps1
+```
+
+For a one-time sync run:
+
+```powershell
+.\.venv\Scripts\python.exe .\scripts\push_to_backend.py --once
+```

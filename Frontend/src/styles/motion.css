@@ -1,0 +1,94 @@
+/* ============================
+   ANIMATIONS
+   ============================ */
+
+@keyframes fade-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.35); }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Entrance animations */
+.section-card,
+.state-card {
+  animation: fade-slide-up 280ms var(--transition-smooth);
+}
+
+.kpi-card {
+  animation: fade-slide-up 350ms var(--transition-smooth);
+}
+
+.kpi-card:nth-child(2) { animation-delay: 50ms; }
+.kpi-card:nth-child(3) { animation-delay: 100ms; }
+.kpi-card:nth-child(4) { animation-delay: 150ms; }
+
+.pipeline-stage {
+  animation: fade-in 300ms ease;
+}
+
+.pipeline-stage:nth-child(2) { animation-delay: 40ms; }
+.pipeline-stage:nth-child(3) { animation-delay: 80ms; }
+.pipeline-stage:nth-child(4) { animation-delay: 120ms; }
+.pipeline-stage:nth-child(5) { animation-delay: 160ms; }
+.pipeline-stage:nth-child(6) { animation-delay: 200ms; }
+.pipeline-stage:nth-child(7) { animation-delay: 240ms; }
+
+/* Loading shimmer */
+.loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 25%,
+    var(--bg-hover) 50%,
+    var(--bg-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

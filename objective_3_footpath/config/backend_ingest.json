@@ -1,0 +1,7 @@
+{
+  "enabled": false,
+  "ingest_base_url": "http://127.0.0.1:8000",
+  "api_key": "dev-key",
+  "telemetry_interval_sec": 3,
+  "poll_interval_sec": 2
+}

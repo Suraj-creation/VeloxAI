@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["camera_id", "timestamp", "fps", "latency_ms", "status"],
+  "properties": {
+    "camera_id": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "fps": { "type": "number", "minimum": 0 },
+    "latency_ms": { "type": "number", "minimum": 0 },
+    "reconnects": { "type": "integer", "minimum": 0 },
+    "frame_failures": { "type": "integer", "minimum": 0 },
+    "status": { "type": "string" },
+    "location_name": { "type": "string" }
+  },
+  "additionalProperties": true
+}

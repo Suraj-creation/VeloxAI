@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["violation_id", "timestamp", "location", "vehicle"],
+  "properties": {
+    "violation_id": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "location": {
+      "type": "object",
+      "required": ["camera_id"],
+      "properties": {
+        "camera_id": { "type": "string" },
+        "location_name": { "type": "string" },
+        "gps_lat": { "type": "number" },
+        "gps_lng": { "type": "number" }
+      },
+      "additionalProperties": true
+    },
+    "vehicle": {
+      "type": "object",
+      "required": ["plate_number", "plate_ocr_confidence", "vehicle_class", "estimated_speed_kmph"],
+      "properties": {
+        "plate_number": { "type": "string" },
+        "plate_ocr_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "plate_format_valid": { "type": "boolean" },
+        "vehicle_class": { "type": "string" },
+        "estimated_speed_kmph": { "type": "number", "minimum": 0 },
+        "track_id": { "type": "integer" }
+      },
+      "additionalProperties": true
+    },
+    "fine_amount_inr": { "type": "number", "minimum": 0 },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "full_frame": { "type": "string" },
+        "plate_crop_raw": { "type": "string" },
+        "plate_crop_enhanced": { "type": "string" },
+        "thumbnail": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

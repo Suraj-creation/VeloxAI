@@ -1,0 +1,124 @@
+openapi: 3.0.3
+info:
+  title: FootWatch Backend API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8000
+paths:
+  /v1/telemetry:
+    post:
+      summary: Ingest live camera telemetry
+      responses:
+        '200':
+          description: Accepted
+  /v1/violations:
+    post:
+      summary: Ingest confirmed violation metadata
+      responses:
+        '201':
+          description: Queued
+    get:
+      summary: List violations
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: camera_id
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: plate
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: class
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Violation list
+  /v1/violations/summary:
+    get:
+      summary: Get aggregate dashboard metrics
+      responses:
+        '200':
+          description: Violation summary
+  /v1/alerts:
+    get:
+      summary: List recent system alerts
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: Alert list
+  /v1/violations/{id}:
+    get:
+      summary: Get violation details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Violation record
+  /v1/violations/{id}/evidence-complete:
+    post:
+      summary: Mark evidence upload completion
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Evidence completion accepted
+  /v1/violations/{id}/evidence-url:
+    get:
+      summary: Get signed evidence URL
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Signed URL
+  /v1/live/cameras:
+    get:
+      summary: List live camera states
+      responses:
+        '200':
+          description: Camera state list

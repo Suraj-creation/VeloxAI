@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["camera_id", "status", "last_seen_ts", "expires_at"],
+  "properties": {
+    "camera_id": { "type": "string" },
+    "status": { "type": "string" },
+    "last_seen_ts": { "type": "string", "format": "date-time" },
+    "fps": { "type": "number" },
+    "latency_ms": { "type": "number" },
+    "reconnects": { "type": "integer" },
+    "frame_failures": { "type": "integer" },
+    "location_name": { "type": "string" },
+    "expires_at": { "type": "integer" }
+  },
+  "additionalProperties": true
+}
