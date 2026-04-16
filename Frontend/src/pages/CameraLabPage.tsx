@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AppShell } from '@/app/layout/AppShell'
 import { Badge } from '@/shared/components/Badge'
 import { useLiveCamerasQuery } from '@/modules/live-cameras/hooks/useLiveCamerasQuery'
@@ -30,7 +30,6 @@ type CameraLabConfig = {
 }
 
 type ConnectionReport = {
-  browserCameraApi: boolean
   backendQueryApi: boolean
   backendSummaryApi: boolean
   edgeRuntimeApi: boolean
@@ -50,6 +49,8 @@ type EdgeRuntimeState = {
   frameFailures: number
   reconnects: number
   sourceCamera: string | null
+  signalMeanLuma: number | null
+  signalStdLuma: number | null
 }
 
 const STORAGE_KEY = 'footwatch.camera-lab.config.v1'
@@ -134,34 +135,12 @@ function parseDeviceIndex(raw: string): number | null {
   return parsed
 }
 
-function uniqueDeviceIds(ids: string[]): string[] {
-  const seen = new Set<string>()
-  const result: string[] = []
-
-  ids.forEach((id) => {
-    if (!id || seen.has(id)) {
-      return
-    }
-
-    seen.add(id)
-    result.push(id)
-  })
-
-  return result
-}
-
 export function CameraLabPage() {
   const [config, setConfig] = useState<CameraLabConfig>(() => loadStoredConfig())
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
-  const [previewActive, setPreviewActive] = useState(false)
-  const [previewError, setPreviewError] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState<string>('')
-  const [snapshotDataUrl, setSnapshotDataUrl] = useState<string | null>(null)
-  const [frameInfo, setFrameInfo] = useState({ width: 0, height: 0, fps: 0 })
   const [runningChecks, setRunningChecks] = useState(false)
   const [connectionReport, setConnectionReport] = useState<ConnectionReport | null>(null)
-  const [activeDeviceId, setActiveDeviceId] = useState('')
-  const [activeDeviceLabel, setActiveDeviceLabel] = useState('')
   const [edgeRuntime, setEdgeRuntime] = useState<EdgeRuntimeState>({
     reachable: false,
     running: false,
@@ -171,14 +150,10 @@ export function CameraLabPage() {
     frameFailures: 0,
     reconnects: 0,
     sourceCamera: null,
+    signalMeanLuma: null,
+    signalStdLuma: null,
   })
   const [edgeFrameTick, setEdgeFrameTick] = useState(0)
-
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const statsIntervalRef = useRef<number | null>(null)
-  const lastFrameCountRef = useRef(0)
-  const lastFrameTimeRef = useRef(0)
 
   const liveQuery = useLiveCamerasQuery()
   const summaryQuery = useDashboardSummaryQuery()
@@ -203,22 +178,18 @@ export function CameraLabPage() {
     return devices[selectedSourceIndex]
   }, [devices, selectedSourceIndex])
 
-  const activeDeviceIndex = useMemo(() => {
-    if (!activeDeviceId) {
-      return null
+  const selectedRuntimeDeviceId = useMemo(() => {
+    if (config.sourceMode !== 'device') {
+      return ''
     }
 
-    const index = devices.findIndex((device) => device.deviceId === activeDeviceId)
-    return index >= 0 ? index : null
-  }, [devices, activeDeviceId])
-
-  const cameraContentionLikely = useMemo(() => {
-    if (!previewActive || config.sourceMode !== 'device' || selectedSourceIndex == null || activeDeviceIndex == null) {
-      return false
+    const hasStoredDevice = devices.some((device) => device.deviceId === config.selectedDeviceId)
+    if (config.selectedDeviceId && hasStoredDevice) {
+      return config.selectedDeviceId
     }
 
-    return selectedSourceIndex === activeDeviceIndex
-  }, [previewActive, config.sourceMode, selectedSourceIndex, activeDeviceIndex])
+    return selectedSourceDevice?.deviceId ?? ''
+  }, [config.sourceMode, config.selectedDeviceId, devices, selectedSourceDevice])
 
   const generatedCliCommand = useMemo(() => {
     const sourceToken =
@@ -265,6 +236,8 @@ export function CameraLabPage() {
           frameFailures: 0,
           reconnects: 0,
           sourceCamera: null,
+          signalMeanLuma: null,
+          signalStdLuma: null,
         }
         setEdgeRuntime(fallback)
         return fallback
@@ -288,6 +261,8 @@ export function CameraLabPage() {
         frameFailures: Number(statsRecord?.frame_failures ?? 0),
         reconnects: Number(statsRecord?.reconnects ?? 0),
         sourceCamera: typeof statsRecord?.source_camera === 'string' ? statsRecord.source_camera : null,
+        signalMeanLuma: typeof statsRecord?.signal_mean_luma === 'number' ? Number(statsRecord.signal_mean_luma) : null,
+        signalStdLuma: typeof statsRecord?.signal_std_luma === 'number' ? Number(statsRecord.signal_std_luma) : null,
       }
 
       setEdgeRuntime((previous) => {
@@ -312,6 +287,8 @@ export function CameraLabPage() {
         frameFailures: 0,
         reconnects: 0,
         sourceCamera: null,
+        signalMeanLuma: null,
+        signalStdLuma: null,
       }
       setEdgeRuntime(fallback)
       return fallback
@@ -370,48 +347,45 @@ export function CameraLabPage() {
     }
   }, [])
 
-  useEffect(() => {
-    return () => {
-      if (statsIntervalRef.current != null) {
-        window.clearInterval(statsIntervalRef.current)
-      }
-      stopStream(streamRef.current)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!cameraContentionLikely || !previewActive || !edgeRuntime.running) {
-      return
-    }
-
-    stopPreview()
-    setPreviewError('Browser preview auto-stopped because edge runtime is using the same camera index. Select another browser camera or keep preview stopped for live edge annotations.')
-  }, [cameraContentionLikely, previewActive, edgeRuntime.running])
-
   const updateConfig = <K extends keyof CameraLabConfig>(key: K, value: CameraLabConfig[K]) => {
     setConfig((prev) => ({ ...prev, [key]: value }))
     setSaveMessage('')
   }
 
-  const selectPreferredDevice = (deviceId: string) => {
-    updateConfig('selectedDeviceId', deviceId)
-
+  const selectEdgeRuntimeDevice = async (deviceId: string) => {
     if (config.sourceMode !== 'device') {
       return
     }
 
     const index = devices.findIndex((device) => device.deviceId === deviceId)
-    if (index >= 0) {
-      updateConfig('sourceValue', String(index))
+    if (index < 0) {
+      return
+    }
+
+    const nextConfig: CameraLabConfig = {
+      ...config,
+      sourceValue: String(index),
+      selectedDeviceId: deviceId,
+    }
+
+    setConfig(nextConfig)
+    setSaveMessage('Updating edge runtime camera...')
+
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextConfig))
+      await apiRequest(endpoints.edgeConfig, {
+        method: 'PUT',
+        body: nextConfig,
+        schema: unknownSchema,
+      })
+      setSaveMessage('Edge runtime camera updated and synced to backend.')
+      void fetchEdgeRuntimeStatus()
+    } catch {
+      setSaveMessage('Camera selection saved locally, but failed to sync with edge runtime backend.')
     }
   }
 
   const saveConfig = async () => {
-    if (cameraContentionLikely) {
-      stopPreview()
-      setPreviewError('Browser preview was stopped to release the same camera for edge runtime. Start preview again with a different camera if needed.')
-    }
-
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
       await apiRequest(endpoints.edgeConfig, {
@@ -457,161 +431,6 @@ export function CameraLabPage() {
     }
   }
 
-  function stopPreview() {
-    if (statsIntervalRef.current != null) {
-      window.clearInterval(statsIntervalRef.current)
-      statsIntervalRef.current = null
-    }
-
-    stopStream(streamRef.current)
-    streamRef.current = null
-
-    if (videoRef.current) {
-      videoRef.current.srcObject = null
-    }
-
-    setPreviewActive(false)
-  }
-
-  const startPreview = async () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setPreviewError('Browser camera API is not available in this environment.')
-      return
-    }
-
-    if (config.sourceMode === 'rtsp') {
-      setPreviewError('Browser preview only supports local cameras. For RTSP, run the backend stream pipeline and monitor via Live Cameras page.')
-      return
-    }
-
-    setPreviewError(null)
-    setSnapshotDataUrl(null)
-    setActiveDeviceId('')
-    setActiveDeviceLabel('')
-    stopPreview()
-
-    try {
-      const cameraDevices = await refreshDevices(true)
-      const index = parseDeviceIndex(config.sourceValue)
-      const indexedDevice = index != null ? cameraDevices[index] : undefined
-
-      const preferredIds = uniqueDeviceIds([
-        config.selectedDeviceId,
-        indexedDevice?.deviceId ?? '',
-        ...cameraDevices.map((device) => device.deviceId),
-      ])
-
-      const baseConstraints: MediaTrackConstraints = {
-        width: { ideal: config.previewWidth },
-        height: { ideal: config.previewHeight },
-        frameRate: { ideal: config.targetFps },
-      }
-
-      let stream: MediaStream | null = null
-      let lastAttemptError = ''
-
-      for (const deviceId of preferredIds) {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              ...baseConstraints,
-              deviceId: { exact: deviceId },
-            },
-            audio: false,
-          })
-          break
-        } catch (error) {
-          lastAttemptError = error instanceof Error ? error.message : 'Camera open attempt failed.'
-        }
-      }
-
-      if (!stream) {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: baseConstraints, audio: false })
-        } catch (error) {
-          const fallbackError = error instanceof Error ? error.message : 'Unable to open any camera stream.'
-          throw new Error(lastAttemptError || fallbackError)
-        }
-      }
-
-      streamRef.current = stream
-
-      const activeTrack = stream.getVideoTracks()[0]
-      const activeSettings = activeTrack?.getSettings?.()
-      const openedDeviceId = typeof activeSettings?.deviceId === 'string' ? activeSettings.deviceId : ''
-      const openedDevice = cameraDevices.find((device) => device.deviceId === openedDeviceId)
-
-      setActiveDeviceId(openedDeviceId)
-      setActiveDeviceLabel(openedDevice?.label || `Camera ${index != null ? index + 1 : 1}`)
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
-      }
-
-      setPreviewActive(true)
-
-      lastFrameCountRef.current = 0
-      lastFrameTimeRef.current = performance.now()
-
-      statsIntervalRef.current = window.setInterval(() => {
-        const video = videoRef.current
-        if (!video) {
-          return
-        }
-
-        const width = video.videoWidth || config.previewWidth
-        const height = video.videoHeight || config.previewHeight
-
-        let fps = config.targetFps
-        if (typeof video.getVideoPlaybackQuality === 'function') {
-          const quality = video.getVideoPlaybackQuality()
-          const now = performance.now()
-
-          if (lastFrameCountRef.current === 0) {
-            lastFrameCountRef.current = quality.totalVideoFrames
-            lastFrameTimeRef.current = now
-          } else {
-            const frameDelta = quality.totalVideoFrames - lastFrameCountRef.current
-            const timeDelta = (now - lastFrameTimeRef.current) / 1000
-            if (timeDelta > 0) {
-              fps = frameDelta / timeDelta
-            }
-            lastFrameCountRef.current = quality.totalVideoFrames
-            lastFrameTimeRef.current = now
-          }
-        }
-
-        setFrameInfo({ width, height, fps: Number(fps.toFixed(1)) })
-      }, 1000)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to open camera stream.'
-      setPreviewError(message)
-      setPreviewActive(false)
-    }
-  }
-
-  const captureSnapshot = () => {
-    const video = videoRef.current
-    if (!video) {
-      return
-    }
-
-    const width = video.videoWidth || config.previewWidth
-    const height = video.videoHeight || config.previewHeight
-    const canvas = document.createElement('canvas')
-    canvas.width = width
-    canvas.height = height
-
-    const context = canvas.getContext('2d')
-    if (!context) {
-      return
-    }
-
-    context.drawImage(video, 0, 0, width, height)
-    setSnapshotDataUrl(canvas.toDataURL('image/jpeg', 0.92))
-  }
-
   const runConnectionChecks = async () => {
     setRunningChecks(true)
 
@@ -622,7 +441,6 @@ export function CameraLabPage() {
     ])
 
     setConnectionReport({
-      browserCameraApi: Boolean(navigator.mediaDevices?.getUserMedia),
       backendQueryApi: !liveResult.error,
       backendSummaryApi: !summaryResult.error,
       edgeRuntimeApi: edgeResult.reachable,
@@ -673,53 +491,34 @@ export function CameraLabPage() {
                 <option value="rtsp">RTSP Stream</option>
               </select>
             </label>
-            <label className="camera-lab-field">
-              <span className="text-xs muted">Source Value ({config.sourceMode === 'device' ? 'Index' : 'URL'})</span>
-              <input
-                value={config.sourceValue}
-                onChange={(event) => {
-                  updateConfig('sourceValue', event.target.value)
-
-                  // When index changes, reset pinned device so index-based switching works immediately.
-                  if (config.sourceMode === 'device') {
-                    updateConfig('selectedDeviceId', '')
-                  }
-                }}
-                placeholder={config.sourceMode === 'device' ? '0' : 'rtsp://camera-stream'}
-              />
-            </label>
-            <label className="camera-lab-field">
-              <span className="text-xs muted">Edge Runtime Camera (device mode)</span>
-              <select
-                value={selectedSourceIndex != null ? String(selectedSourceIndex) : ''}
-                onChange={(event) => {
-                  updateConfig('sourceValue', event.target.value)
-                  updateConfig('selectedDeviceId', '')
-                }}
-                disabled={config.sourceMode !== 'device' || devices.length === 0}
-              >
-                <option value="">Use manual index</option>
-                {devices.map((device, index) => (
-                  <option key={device.deviceId} value={String(index)}>
-                    [{index}] {device.label || `Camera ${index + 1}`}
+            {config.sourceMode === 'rtsp' ? (
+              <label className="camera-lab-field">
+                <span className="text-xs muted">Source Value (URL)</span>
+                <input
+                  value={config.sourceValue}
+                  onChange={(event) => updateConfig('sourceValue', event.target.value)}
+                  placeholder="rtsp://camera-stream"
+                />
+              </label>
+            ) : (
+              <label className="camera-lab-field">
+                <span className="text-xs muted">Edge Runtime Camera (device mode)</span>
+                <select
+                  value={selectedRuntimeDeviceId}
+                  onChange={(event) => void selectEdgeRuntimeDevice(event.target.value)}
+                  disabled={devices.length === 0}
+                >
+                  <option value="" disabled>
+                    {devices.length === 0 ? 'No camera devices detected' : 'Select camera'}
                   </option>
-                ))}
-              </select>
-            </label>
-            <label className="camera-lab-field">
-              <span className="text-xs muted">Preferred Device (sync browser + edge index)</span>
-              <select
-                value={config.selectedDeviceId}
-                onChange={(event) => selectPreferredDevice(event.target.value)}
-              >
-                <option value="">Auto-select from source index</option>
-                {devices.map((device, index) => (
-                  <option key={device.deviceId} value={device.deviceId}>
-                    [{index}] {device.label || `Camera ${index + 1}`}
-                  </option>
-                ))}
-              </select>
-            </label>
+                  {devices.map((device, index) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      [{index}] {device.label || `Camera ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label className="camera-lab-field">
               <span className="text-xs muted">Preview Width</span>
               <input
@@ -811,7 +610,7 @@ export function CameraLabPage() {
           </div>
 
           <p className="text-xs muted" style={{ marginTop: '0.75rem' }}>
-            Edge annotated feed uses Source Value camera index. In device mode, selecting a preferred device also syncs the source index.
+            Camera selection above is the single source for edge runtime detection. It syncs source index and selected device to backend.
           </p>
 
           {saveMessage ? <p className="text-sm muted" style={{ marginTop: '0.8rem' }}>{saveMessage}</p> : null}
@@ -820,40 +619,22 @@ export function CameraLabPage() {
         <section className="section-card" id="camera-lab-preview">
           <div className="section-header">
             <span className="section-icon">🎥</span>
-            <h2 style={{ marginBottom: 0 }}>Camera Test & Model Preview</h2>
-            <Badge tone={previewActive ? 'success' : 'neutral'}>{previewActive ? 'Browser Live' : 'Browser Stopped'}</Badge>
+            <h2 style={{ marginBottom: 0 }}>Edge Model Preview</h2>
             <Badge tone={edgeRuntime.running ? 'success' : 'warning'}>
               {edgeRuntime.running ? 'Edge Runtime Live' : 'Edge Runtime Offline'}
             </Badge>
           </div>
 
-          <div className="camera-preview-split">
-            <article>
-              <p className="camera-preview-caption">Browser Camera Feed (No model overlay)</p>
-              <div className="camera-preview-shell">
-                <video ref={videoRef} className="camera-preview-video" muted playsInline />
-              </div>
-            </article>
-
-            <article>
-              <p className="camera-preview-caption">Edge Model Annotated Feed (Rectangles / Detection)</p>
-              <div className="camera-preview-shell">
-                {edgeRuntime.hasPreviewFrame ? (
-                  <img src={edgeFrameUrl} alt="Edge annotated preview" className="camera-preview-image" />
-                ) : (
-                  <p className="text-sm muted" style={{ textAlign: 'center', padding: '1rem' }}>
-                    No annotated frame yet. Start the edge Streamlit runtime (8501) in enforcement mode.
-                  </p>
-                )}
-              </div>
-            </article>
+          <p className="camera-preview-caption">Edge Model Annotated Feed (Rectangles / Detection)</p>
+          <div className="camera-preview-shell">
+            {edgeRuntime.hasPreviewFrame ? (
+              <img src={edgeFrameUrl} alt="Edge annotated preview" className="camera-preview-image" />
+            ) : (
+              <p className="text-sm muted" style={{ textAlign: 'center', padding: '1rem' }}>
+                No annotated frame yet. Run the edge runtime script and verify camera source index plus lens/privacy shutter.
+              </p>
+            )}
           </div>
-
-          {cameraContentionLikely ? (
-            <p className="text-sm muted" style={{ marginTop: '0.75rem' }}>
-              Browser preview and edge runtime are targeting the same camera index. On Windows this often locks the device for one process. Stop browser preview or pick another browser camera to keep edge annotations live.
-            </p>
-          ) : null}
 
           {edgeRuntime.status === 'waiting_frame' ? (
             <p className="text-sm muted" style={{ marginTop: '0.75rem' }}>
@@ -861,53 +642,43 @@ export function CameraLabPage() {
             </p>
           ) : null}
 
+          {edgeRuntime.status === 'signal_flat' ? (
+            <p className="text-sm muted" style={{ marginTop: '0.75rem' }}>
+              Edge runtime is receiving a flat camera signal (mean luma {edgeRuntime.signalMeanLuma ?? 'N/A'}, std {edgeRuntime.signalStdLuma ?? 'N/A'}). Check lens/privacy shutter, lighting, and select the correct physical camera.
+            </p>
+          ) : null}
+
           <div className="camera-config-actions" style={{ marginTop: '1rem' }}>
-            <button className="btn-primary" type="button" onClick={() => void startPreview()}>Start Preview</button>
-            <button className="btn-ghost" type="button" onClick={stopPreview}>Stop Preview</button>
-            <button className="btn-ghost" type="button" onClick={captureSnapshot} disabled={!previewActive}>Capture Snapshot</button>
-            <button className="btn-ghost" type="button" onClick={() => void refreshDevices(true)}>Refresh Camera List</button>
+            <button className="btn-primary" type="button" onClick={() => void refreshDevices(true)}>Refresh Camera List</button>
             <button className="btn-ghost" type="button" onClick={() => void fetchEdgeRuntimeStatus()}>Refresh Edge Preview</button>
           </div>
 
-          {previewError ? <p className="text-danger text-sm" style={{ marginTop: '0.75rem' }}>{previewError}</p> : null}
-
           <div className="camera-lab-metrics-grid" style={{ marginTop: '1rem' }}>
-            <div className="camera-metric-item">
-              <span className="text-xs muted">Preview Resolution</span>
-              <strong>{frameInfo.width} × {frameInfo.height}</strong>
-            </div>
-            <div className="camera-metric-item">
-              <span className="text-xs muted">Measured FPS</span>
-              <strong>{frameInfo.fps.toFixed(1)}</strong>
-            </div>
             <div className="camera-metric-item">
               <span className="text-xs muted">Detected Devices</span>
               <strong>{devices.length}</strong>
-            </div>
-            <div className="camera-metric-item">
-              <span className="text-xs muted">Active Camera</span>
-              <strong>{activeDeviceLabel || 'N/A'}</strong>
-            </div>
-            <div className="camera-metric-item">
-              <span className="text-xs muted">Active Device ID</span>
-              <strong className="font-mono text-xs">{activeDeviceId || 'N/A'}</strong>
             </div>
             <div className="camera-metric-item">
               <span className="text-xs muted">Edge Source Camera</span>
               <strong>{selectedSourceDevice?.label || edgeRuntime.sourceCamera || `Index ${config.sourceValue}`}</strong>
             </div>
             <div className="camera-metric-item">
+              <span className="text-xs muted">Source Value (Index / URL)</span>
+              <strong>{config.sourceValue || 'N/A'}</strong>
+            </div>
+            <div className="camera-metric-item">
               <span className="text-xs muted">Edge Runtime Status</span>
               <strong>{edgeRuntime.status || 'unknown'}</strong>
             </div>
-          </div>
-
-          {snapshotDataUrl ? (
-            <div style={{ marginTop: '1rem' }}>
-              <p className="text-xs muted" style={{ marginBottom: '0.5rem' }}>Latest Snapshot</p>
-              <img src={snapshotDataUrl} alt="Camera snapshot" className="camera-preview-image" />
+            <div className="camera-metric-item">
+              <span className="text-xs muted">Frame Failures</span>
+              <strong>{edgeRuntime.frameFailures}</strong>
             </div>
-          ) : null}
+            <div className="camera-metric-item">
+              <span className="text-xs muted">Reconnects</span>
+              <strong>{edgeRuntime.reconnects}</strong>
+            </div>
+          </div>
         </section>
       </section>
 
@@ -979,12 +750,6 @@ export function CameraLabPage() {
 
           {connectionReport ? (
             <ul className="camera-check-list">
-              <li>
-                <span>Browser Camera API</span>
-                <Badge tone={connectionReport.browserCameraApi ? 'success' : 'danger'}>
-                  {connectionReport.browserCameraApi ? 'Ready' : 'Unavailable'}
-                </Badge>
-              </li>
               <li>
                 <span>Backend Live Camera Endpoint</span>
                 <Badge tone={connectionReport.backendQueryApi ? 'success' : 'danger'}>

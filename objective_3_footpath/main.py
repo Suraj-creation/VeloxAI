@@ -72,10 +72,13 @@ def clean_plate_text(raw: str) -> str:
 
 
 def export_metrics(stats: dict[str, Any], elapsed_ms: float, running: bool = True) -> None:
+    elapsed = round(float(elapsed_ms), 1)
+    inference_fps = round(1000.0 / float(elapsed_ms), 1) if float(elapsed_ms) > 0.0 else 0.0
+
     payload = {
         "timestamp": datetime.now().isoformat(),
-        "elapsed_ms": round(float(elapsed_ms), 1),
-        "inference_fps": round(1000.0 / max(float(elapsed_ms), 1e-6), 1),
+        "elapsed_ms": elapsed,
+        "inference_fps": inference_fps,
         "running": bool(running),
         "stats": stats,
         "session": {
@@ -145,6 +148,11 @@ def open_capture(source: str | int, width: int, height: int) -> cv2.VideoCapture
 def draw_box(frame: np.ndarray, x1: int, y1: int, x2: int, y2: int, label: str, color: tuple[int, int, int]) -> None:
     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
     cv2.putText(frame, label, (x1, max(18, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2)
+
+
+def frame_signal_metrics(frame: np.ndarray) -> tuple[float, float]:
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    return float(np.mean(gray)), float(np.std(gray))
 
 
 def run_general_detection(frame: np.ndarray, model: YOLO, conf: float) -> tuple[np.ndarray, dict[str, Any]]:
@@ -309,6 +317,51 @@ def run_smoke(video_source: str | int = 0, max_frames: int = 60) -> None:
 
         frame_failures = 0
 
+        signal_mean_luma, signal_std_luma = frame_signal_metrics(frame)
+        signal_flat = signal_std_luma < 4.0 or signal_mean_luma < 5.0 or signal_mean_luma > 250.0
+        if signal_flat:
+            annotated = frame.copy()
+            cv2.putText(
+                annotated,
+                "Camera signal looks flat/overexposed.",
+                (24, 34),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.75,
+                (0, 0, 255),
+                2,
+            )
+            cv2.putText(
+                annotated,
+                "Check privacy shutter, lens cover, lighting, and camera selection.",
+                (24, 64),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (0, 0, 255),
+                2,
+            )
+            export_preview_frame(annotated)
+            export_metrics(
+                {
+                    "mode": mode,
+                    "status": "signal_flat",
+                    "detected": 0,
+                    "moving_hits": 0,
+                    "plates_read": 0,
+                    "violations_saved": 0,
+                    "reconnects": int(reconnects),
+                    "camera_failures": int(frame_failures),
+                    "frame_failures": int(frame_failures),
+                    "source_camera": str(selected_source),
+                    "signal_mean_luma": round(signal_mean_luma, 2),
+                    "signal_std_luma": round(signal_std_luma, 2),
+                    "class_counts": {},
+                },
+                0.0,
+                running=True,
+            )
+            time.sleep(max(0.05, 1.0 / max(target_fps, 1)))
+            continue
+
         frame_count += 1
         t0 = time.time()
 
@@ -431,6 +484,8 @@ def run_smoke(video_source: str | int = 0, max_frames: int = 60) -> None:
             "camera_failures": int(frame_failures),
             "frame_failures": int(frame_failures),
             "source_camera": str(selected_source),
+            "signal_mean_luma": round(signal_mean_luma, 2),
+            "signal_std_luma": round(signal_std_luma, 2),
             "class_counts": class_counts,
         }
         export_metrics(run_stats, latency_ms, running=True)
