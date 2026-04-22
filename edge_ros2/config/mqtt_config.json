@@ -1,16 +1,31 @@
 {
+  "site_id": "SITE-001",
   "broker_host": "a26ix7882z43xd-ats.iot.ap-south-1.amazonaws.com",
   "broker_port": 8883,
   "client_id": "fw-edge-001",
-  "cert_dir": "/certs",
-  "ca_cert": "root-CA.crt",
-  "device_cert": "device.cert.pem",
-  "private_key": "device.private.key",
+  "cert_dir": "../certs",
+  "ca_cert": "rootCA.pem",
+  "device_cert": "cert.pem",
+  "private_key": "private.key",
   "keep_alive": 60,
-
-  "_dev_override_": {
-    "note": "For local dev testing, set broker_host to localhost and broker_port to 1883. Remove ca_cert to skip TLS.",
-    "broker_host": "localhost",
-    "broker_port": 1883
+  "mqtt_enabled": true,
+  "mqtt_topic_prefix": "footwatch",
+  "mqtt_telemetry_topic": "telemetry",
+  "mqtt_violation_topic": "violations",
+  "mqtt_live_topic": "live",
+  "http_enabled": true,
+  "http_ingest_base_url": "https://va76meg87j.execute-api.ap-south-1.amazonaws.com/ingest",
+  "http_ingest_base_url_env": "FW_INGEST_API_BASE_URL",
+  "http_api_key_env": "FW_INGEST_API_KEY",
+  "http_timeout_sec": 10.0,
+  "_notes": {
+    "cert_paths": "cert_dir is resolved relative to edge_ros2/config/. Place files in edge_ros2/certs/ on the Pi.",
+    "required_cert_files": [
+      "edge_ros2/certs/rootCA.pem",
+      "edge_ros2/certs/cert.pem",
+      "edge_ros2/certs/private.key"
+    ],
+    "http_auth": "Set FW_INGEST_API_KEY in the Raspberry Pi shell before launching the stack.",
+    "dev_override": "For local broker testing set broker_host=localhost, broker_port=1883, mqtt_enabled=true, and optionally http_enabled=false."
   }
 }

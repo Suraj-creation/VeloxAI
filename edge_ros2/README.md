@@ -1,138 +1,217 @@
-# Footwatch Edge Runtime — `edge_ros2` (Native)
+# edge_ros2
 
-**Production-grade ROS 2 Humble edge inference system for Objective 3 Footpath Enforcement.**
+Production-oriented ROS2 Humble edge runtime for Raspberry Pi 400 deployments.
 
-This repository has been optimized to run completely natively (without Docker) on both **Ubuntu (x86_64)** engineering test systems and **Raspberry Pi 400 (ARM64)** edge deployments.
+The current implementation keeps the vision and tracking pipeline local on the
+edge device and uses a dedicated cloud bridge to deliver backend-compatible
+JSON to AWS. With the latest bridge updates, the flow now supports both:
 
----
+- MQTT delivery to AWS IoT Core over TLS
+- Optional HTTP mirroring to the deployed ingest API so the live frontend path works immediately
 
-## System Overview
+## Architecture
 
+Logical pipeline:
+
+1. `camera_node`
+   Current package: `fw_sensor_bridge`
+   Publishes camera frames and diagnostics.
+2. `inference_node`
+   Current package: `fw_inference_node`
+   Runs two-wheeler detection.
+3. `tracking_node`
+   Current package: `fw_tracking_speed_node`
+   Assigns track IDs and keeps object history.
+4. `speed_estimation_node`
+   Current package: `fw_tracking_speed_node`
+   Runs the Kalman speed estimator per track.
+5. `violation_detection_node`
+   Current package: `fw_violation_aggregator`
+   Correlates tracks, OCR, cooldown logic, and evidence output.
+6. `mqtt_bridge_node`
+   Current package: `fw_ros2_mqtt_bridge`
+   Converts ROS messages into cloud JSON and delivers them to AWS.
+
+Primary ROS2 topics:
+
+- `/fw/camera/frame`
+- `/fw/detect/twowheeler`
+- `/fw/track/speed`
+- `/fw/violation/candidate`
+- `/fw/violation/confirmed`
+- `/fw/health/runtime`
+
+Cloud delivery topics:
+
+- `footwatch/{site_id}/{camera_id}/telemetry`
+- `footwatch/{site_id}/{camera_id}/violations`
+- `footwatch/{site_id}/{camera_id}/live`
+
+## Backend Payload Contract
+
+Telemetry payload:
+
+```json
+{
+  "device_id": "pi-001",
+  "camera_id": "FP_CAM_001",
+  "timestamp": "2026-04-23T10:00:00+00:00",
+  "fps": 12.5,
+  "latency_ms": 55.0,
+  "status": "active"
+}
 ```
-[Camera /video0 or RTSP]
-         │
-  [fw_sensor_bridge] ── publish header.frame_id ──► /fw/camera/frame
-         │
-         ├──► [fw_inference_node]       ── Stage 1 YOLOv8 detection ──► /fw/detect/twowheeler
-         │
-         ├──► [fw_tracking_speed_node]  ── ByteTrack + Kalman ──► /fw/track/speed
-         │
-         ├──► [fw_plate_ocr_node]       ── LP localise + CLAHE + PaddleOCR ──► /fw/plate/ocr
-         │
-         └──► [fw_violation_aggregator] ── evidence bundle + challan ──► /fw/violation/confirmed
-                   │
-              [fw_ros2_mqtt_bridge] ── SQLite spool + at-least-once ──► AWS IoT Core MQTT
-                   │
-              [fw_health_node] ── metrics + watchdog ──► /fw/health/runtime → Prometheus
+
+Violation payload:
+
+```json
+{
+  "violation_id": "vio-001",
+  "timestamp": "2026-04-23T10:00:01+00:00",
+  "location": {
+    "camera_id": "FP_CAM_001",
+    "location_name": "Sample Junction",
+    "gps_lat": 12.9716,
+    "gps_lng": 77.5946
+  },
+  "vehicle": {
+    "plate_number": "KA05AB1234",
+    "plate_ocr_confidence": 0.91,
+    "plate_format_valid": true,
+    "vehicle_class": "motorcycle",
+    "estimated_speed_kmph": 21.0,
+    "track_id": 101
+  }
+}
 ```
 
----
+These payloads are what the bridge now sends to the deployed AWS ingest API.
 
-## Getting Started
+## Raspberry Pi 400 Setup
 
-### 1. One-Time Setup
-Run the setup script on a fresh Ubuntu Humble or Raspberry Pi system to install dependencies and build the workspace.
+1. Install ROS2 Humble on Ubuntu 22.04 ARM64.
+2. Clone the repo onto the Pi.
+3. From `edge_ros2/`, run:
+
 ```bash
-cd edge_ros2
 bash scripts/setup.sh
 ```
-*Note: This script will install Python dependencies, configure testing folders, and run `colcon build --symlink-install`.*
 
-### 2. Prepare Models
-Download and place the following AI models into the `models/` folder:
-- `twowheeler_yolov8n.pt`
-- `lp_localiser.pt`
+4. Place model files into `edge_ros2/models/`:
 
-### 3. Run the Stack Locally
-To start all 7 ROS2 nodes at once, use the unified `start.sh` script, which wraps the ROS2 launch framework:
+```text
+twowheeler_yolov8n.pt
+lp_localiser.pt
+```
+
+5. Place AWS IoT certificates into `edge_ros2/certs/`:
+
+```text
+rootCA.pem
+cert.pem
+private.key
+```
+
+6. Export the backend ingest API key before launch:
+
+```bash
+export FW_INGEST_API_KEY="<your-ingest-api-key>"
+```
+
+Optional overrides:
+
+```bash
+export FW_INGEST_API_BASE_URL="https://va76meg87j.execute-api.ap-south-1.amazonaws.com/ingest"
+export DEVICE_ID="pi-001"
+export CAMERA_ID="FP_CAM_001"
+export SITE_ID="SITE-001"
+```
+
+## Running The Pipeline
+
+Run the full stack:
+
 ```bash
 bash scripts/start.sh all
 ```
 
-**(Optional)** Run a local Mosquitto MQTT broker for testing:
+Run using the launch alias:
+
 ```bash
-bash scripts/start.sh mosquitto
+source /opt/ros/humble/setup.bash
+source ros2_ws/install/setup.bash
+ros2 launch fw_launch edge_pipeline.launch.py
 ```
 
-### 4. Verify System 
-In a new terminal window, execute the smoke test to verify all nodes are communicating, taking snapshots of topics, checking CPU health, and verifying SQLite bridges:
+Check system state:
+
 ```bash
+bash scripts/start.sh status
 bash scripts/smoke_test.sh
 ```
 
----
+## Local Simulation Mode
 
-## Repository Structure
+You can validate the cloud bridge without a camera or ROS2 runtime.
 
-```
-edge_ros2/
-├── ros2_ws/src/
-│   ├── fw_launch/               # Master launch file package
-│   ├── fw_msgs/                 # Custom ROS 2 interfaces
-│   ├── fw_sensor_bridge/        # Camera ingress & UUID tagging
-│   ├── fw_inference_node/       # Stage 1: Pipeline
-│   ├── fw_tracking_speed_node/  # Stage 3: Kalman speed
-│   ├── fw_plate_ocr_node/       # Stages 4/5/6: Enhancement + OCR
-│   ├── fw_violation_aggregator/ # Stage 7: Event creation
-│   ├── fw_ros2_mqtt_bridge/     # AWS proxy and durable spools
-│   └── fw_health_node/          # Device vitals export
-├── config/
-│   ├── camera_lab.json          # Device ID, resolution
-│   ├── speed_calibration.json   # Scale factors
-│   ├── thresholds.json          # NLP confidences
-│   └── mqtt_config.json         # AWS IoT endpoint + Cert flags 
-├── scripts/
-│   ├── setup.sh                 # Environment setup and build
-│   ├── start.sh                 # CLI abstraction over launch files
-│   ├── smoke_test.sh            # E2E test
-│   └── local_mqtt_to_aws_mock.py# Dev bridge to test AWS -> Backend calls
-├── tests/                       # Unit/Integration testing suite
-├── requirements.txt             # Unified Python dependencies
-└── README.md
-```
-
----
-
-## ROS2 Topic Contract
-
-All node correlations use `msg.header.frame_id` dynamically assigned by `fw_sensor_bridge`.
-
-| Topic | Publisher | QoS | Rate | Note |
-|---|---|---|---|---|
-| `/fw/camera/frame` | `fw_sensor_bridge` | BEST_EFFORT | Video FPS | `sensor_msgs/CompressedImage` |
-| `/fw/detect/twowheeler` | `fw_inference_node` | RELIABLE | Batched | Filters cars/pedestrians |
-| `/fw/track/speed` | `fw_tracking_speed_node` | RELIABLE | Synchronous | Issues unique Box IDs |
-| `/fw/plate/ocr` | `fw_plate_ocr_node` | RELIABLE | Async | Yields highest prob license |
-| `/fw/violation/confirmed` | `fw_violation_aggregator` | RELIABLE | Event | Assembles evidence payloads |
-| `/fw/health/runtime` | `fw_health_node` | RELIABLE | 10s intervals | HW telemetry |
-
----
-
-## MQTT Topic Contract (AWS IoT Core)
-
-| MQTT Topic | Trigger | QoS | Content |
-|---|---|---|---|
-| `footwatch/{site_id}/{camera_id}/violation` | Confirmed challan | 1 | Full violation payload schema v1 |
-| `footwatch/{site_id}/{camera_id}/live` | Candidate detection | 0 | Live bounding box event |
-| `footwatch/{site_id}/{camera_id}/health` | Heartbeat | 0 | Device health metrics |
-
----
-
-## AWS IoT Deployment
-1. Connect via AWS Console and create "Thing" policy for `fp-edge-*`.
-2. Save credentials to `certs/`:
-   - `root-CA.crt`
-   - `device.cert.pem`
-   - `device.private.key`
-3. Update `config/mqtt_config.json` configuration target.
-4. The edge node will spool offline packets to `violations/mqtt_spool.db` and auto-replay when WAN link resumes.
-
-## Tests (Unit & Edge)
-Pytest validates node logic, while skipping heavy integrations transparently.
+Print the exact payloads:
 
 ```bash
-cd edge_ros2
-pytest tests/ -v
+python test_mqtt_local.py --mode mock
 ```
 
-_Apache-2.0 — Footwatch Edge Team_
+Send sample data to the deployed ingest API:
+
+```bash
+export FW_INGEST_API_KEY="<your-ingest-api-key>"
+python test_mqtt_local.py --mode backend
+```
+
+Publish sample data to AWS IoT Core:
+
+```bash
+python test_mqtt_local.py --mode aws
+```
+
+## Reliability Features
+
+- Relative certificate resolution from `edge_ros2/config/mqtt_config.json`
+- Durable SQLite delivery spool in `violations/mqtt_spool.db`
+- MQTT reconnect with backoff
+- Replay of undelivered events after reconnect
+- HTTP mirror mode for immediate backend/frontend visibility
+- Best-effort live candidate stream plus durable telemetry and violations
+
+## Testing
+
+Run the edge test suite:
+
+```bash
+python -m pytest tests -q
+```
+
+What the tests cover:
+
+- Payload generation against the backend contract
+- HTTP ingest delivery flow
+- Tracking and speed estimation behavior
+- Evidence writer behavior
+- End-to-end pure Python pipeline contracts
+
+## Debugging Checklist
+
+- `certs/` contains `rootCA.pem`, `cert.pem`, and `private.key`
+- `FW_INGEST_API_KEY` is exported in the Pi shell
+- `config/mqtt_config.json` points at the correct AWS IoT endpoint
+- `models/` contains the detector and plate localizer weights
+- `bash scripts/start.sh status` shows all ROS2 nodes
+- `bash scripts/smoke_test.sh` passes local runtime checks
+- `violations/mqtt_spool.db` is not growing indefinitely
+- The ingest API returns `2xx` for `python test_mqtt_local.py --mode backend`
+- Frontend is reachable at `https://d25zv8xa1ffqpw.cloudfront.net`
+- Backend query health is reachable at `https://va76meg87j.execute-api.ap-south-1.amazonaws.com/query/health`
+
+## Notes
+
+- The current codebase keeps the existing `fw_*` package structure because it is already close to production-ready and test-covered.
+- The cloud bridge now handles the strict backend JSON contract so the edge pipeline can stay ROS-native internally while remaining compatible with the deployed AWS backend and frontend.

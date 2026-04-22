@@ -11,11 +11,15 @@ setup(
          ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
     ],
-    install_requires=['setuptools'],
+    install_requires=[
+        'setuptools',
+        'paho-mqtt>=1.6.1',
+        'requests>=2.31.0',
+    ],
     zip_safe=True,
     maintainer='Footwatch Edge Team',
     maintainer_email='footwatch@example.com',
-    description='Footwatch ROS2-to-MQTT bridge with SQLite spool and AWS IoT Core TLS',
+    description='Footwatch cloud bridge with AWS IoT TLS, backend ingest mirroring, and durable delivery spool',
     license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={

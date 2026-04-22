@@ -156,6 +156,10 @@ class ByteTrackWrapper:
             t["matched"] = False
 
         if not detections:
+            dead = [tid for tid, t in self._tracks.items()
+                    if t["age"] > self.max_age]
+            for tid in dead:
+                del self._tracks[tid]
             return self._confirmed_tracks()
 
         # Build cost matrix (IoU)
