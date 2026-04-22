@@ -1,0 +1,10 @@
+{
+  "roi_enabled": false,
+  "roi_comment": "Set roi_enabled=true and define polygon to restrict enforcement to a specific zone. Leave false for full-frame enforcement (recommended for fixed footpath cameras — ML Guide §5).",
+  "site_id": "FP_SITE_001",
+
+  "roi_polygon": [],
+
+  "zone_name": "Full Frame",
+  "zone_note": "No polygon gate. All detected vehicles proceed to tracking. Violation filtering is done at speed + OCR stage."
+}

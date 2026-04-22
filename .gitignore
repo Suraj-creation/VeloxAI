@@ -1,0 +1,29 @@
+# Python virtual environments
+.venv/
+**/.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Test/cache artifacts
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+# Runtime outputs
+objective_3_footpath/violations/
+objective_3_footpath/logs/
+objective_3_footpath/.metrics.json
+
+# Terraform local state/cache
+**/.terraform/
+
+# Local model cache metadata
+objective_3_footpath/models/hf_cache/.cache/
+
+# Editor/OS
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,5 @@
+bucket         = "footwatch-tfstate-<account-id>"
+key            = "backend/dev/terraform.tfstate"
+region         = "ap-south-1"
+dynamodb_table = "footwatch-terraform-locks"
+encrypt        = true

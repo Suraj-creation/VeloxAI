@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>fw_launch</name>
+  <version>1.0.0</version>
+  <description>Launch file for all Footwatch edge nodes</description>
+  <maintainer email="footwatch@example.com">Footwatch Edge Team</maintainer>
+  <license>Apache-2.0</license>
+  <exec_depend>ros2launch</exec_depend>
+  <exec_depend>fw_sensor_bridge</exec_depend>
+  <exec_depend>fw_inference_node</exec_depend>
+  <exec_depend>fw_tracking_speed_node</exec_depend>
+  <exec_depend>fw_plate_ocr_node</exec_depend>
+  <exec_depend>fw_violation_aggregator</exec_depend>
+  <exec_depend>fw_ros2_mqtt_bridge</exec_depend>
+  <exec_depend>fw_health_node</exec_depend>
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

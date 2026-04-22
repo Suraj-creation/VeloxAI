@@ -1,0 +1,30 @@
+{
+  "footpath_roi": [
+    [
+      200,
+      700
+    ],
+    [
+      1700,
+      700
+    ],
+    [
+      1800,
+      1000
+    ],
+    [
+      100,
+      1000
+    ],
+    [
+      200,
+      700
+    ]
+  ],
+  "buffer_zone_expand_px": 15,
+  "camera_id": "FP_CAM_001",
+  "location_name": "Sample Junction",
+  "gps_lat": 12.9716,
+  "gps_lng": 77.5946,
+  "calibration_date": "2026-04-09"
+}

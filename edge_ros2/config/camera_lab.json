@@ -1,0 +1,15 @@
+{
+  "cameraId": "FP_CAM_001",
+  "locationName": "Sample Junction",
+  "gpsLat": 12.9716,
+  "gpsLng": 77.5946,
+  "sourceMode": "device",
+  "sourceValue": "0",
+  "previewWidth": 960,
+  "previewHeight": 540,
+  "targetFps": 10,
+  "detectionConfidence": 0.45,
+  "model_file": "twowheeler_yolov8n.pt",
+  "config_version": 1,
+  "updatedAt": "2026-04-17T00:00:00Z"
+}

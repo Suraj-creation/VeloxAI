@@ -1,0 +1,21 @@
+{
+  "cameraId": "FP_CAM_001",
+  "locationName": "Sample Junction",
+  "gpsLat": "12.9716",
+  "gpsLng": "77.5946",
+  "sourceMode": "device",
+  "sourceValue": "0",
+  "selectedDeviceId": "",
+  "previewWidth": 960,
+  "previewHeight": 540,
+  "targetFps": 10,
+  "detectionConfidence": 0.35,
+  "speedThresholdKmph": 5.0,
+  "minOcrConfidence": 0.65,
+  "cooldownSec": 60,
+  "generalModel": "YOLOv8n General Objects",
+  "enforcementModel": "YOLOv8n Two-Wheeler + LP + PaddleOCR",
+  "enablePlatePipeline": true,
+  "pixelsPerMetre": 47,
+  "updated_at": "2026-04-16T18:52:47.380884+00:00"
+}

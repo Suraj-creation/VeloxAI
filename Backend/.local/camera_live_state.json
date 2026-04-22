@@ -1,0 +1,35 @@
+{
+  "FP_CAM_001": {
+    "camera_id": "FP_CAM_001",
+    "timestamp": "2026-04-16T18:45:17.534792+00:00",
+    "status": "online",
+    "fps": 1.2038646017417172,
+    "latency_ms": 830.6581974029541,
+    "reconnects": 0,
+    "frame_failures": 0,
+    "last_seen_ts": "2026-04-16T18:45:17.534792+00:00",
+    "expires_at": 1776365297
+  },
+  "FP_CAM_TEST": {
+    "camera_id": "FP_CAM_TEST",
+    "timestamp": "2026-04-16T18:20:14.494524+00:00",
+    "status": "online",
+    "fps": 4.740681799429668,
+    "latency_ms": 210.94012260437012,
+    "reconnects": 0,
+    "frame_failures": 0,
+    "last_seen_ts": "2026-04-16T18:20:14.494524+00:00",
+    "expires_at": 1776363794
+  },
+  "health-check": {
+    "camera_id": "health-check",
+    "timestamp": "2026-04-17T00:00:00Z",
+    "status": "online",
+    "fps": 1,
+    "latency_ms": 1,
+    "reconnects": 0,
+    "frame_failures": 0,
+    "last_seen_ts": "2026-04-17T00:00:00Z",
+    "expires_at": 1776365515
+  }
+}

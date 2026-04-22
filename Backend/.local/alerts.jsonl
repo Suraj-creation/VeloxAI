@@ -1,0 +1,9 @@
+{"alert_id": "alert_vio-worker-1", "camera_id": "FP_CAM_001", "violation_id": "vio-worker-1", "severity": "info", "message": "Violation processed successfully", "created_at": "2026-04-11T19:01:38.359051+00:00"}
+{"alert_id": "alert_vio-e2e-001", "camera_id": "FP_CAM_001", "violation_id": "vio-e2e-001", "severity": "info", "message": "Violation processed successfully", "created_at": "2026-04-11T19:13:30.280250+00:00"}
+{"alert_id": "alert_vio-worker-1", "camera_id": "FP_CAM_001", "violation_id": "vio-worker-1", "severity": "info", "message": "Violation processed successfully", "created_at": "2026-04-11T19:19:00.361883+00:00"}
+{"alert_id": "alert_vio-worker-1", "camera_id": "FP_CAM_001", "violation_id": "vio-worker-1", "severity": "info", "message": "Violation processed successfully", "created_at": "2026-04-11T19:25:41.043776+00:00"}
+{"alert_id": "alert_smoke-2e264c1eb2", "camera_id": "FP_CAM_SMOKE", "violation_id": "smoke-2e264c1eb2", "severity": "info", "message": "Violation processed successfully", "created_at": "2026-04-11T19:51:43.911935+00:00"}
+{"alert_id": "alert_edge-demo-8cb59971", "camera_id": "FP_CAM_001", "violation_id": "edge-demo-8cb59971", "severity": "info", "message": "Violation processed successfully", "created_at": "2026-04-12T05:18:17.903308+00:00"}
+{"alert_id": "alert_vio-worker-1", "camera_id": "FP_CAM_001", "violation_id": "vio-worker-1", "severity": "info", "message": "Violation processed successfully", "created_at": "2026-04-12T07:24:13.600129+00:00"}
+{"alert_id": "alert_vio-worker-1", "camera_id": "FP_CAM_001", "violation_id": "vio-worker-1", "severity": "info", "message": "Violation processed successfully", "created_at": "2026-04-12T07:28:03.736220+00:00"}
+{"alert_id": "alert_vio-worker-1", "camera_id": "FP_CAM_001", "violation_id": "vio-worker-1", "severity": "info", "message": "Violation processed successfully", "created_at": "2026-04-12T08:02:08.821041+00:00"}

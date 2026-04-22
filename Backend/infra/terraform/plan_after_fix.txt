@@ -1,0 +1,49 @@
+﻿data.archive_file.backend_bundle: Reading...
+data.archive_file.backend_bundle: Read complete after 1s [id=8edf3dbca1919b5329a5862372847c7d523636ab]
+data.aws_iam_policy_document.lambda_assume_role: Reading...
+data.aws_caller_identity.current[0]: Reading...
+aws_cloudwatch_log_group.ingest_api: Refreshing state... [id=/aws/lambda/footwatch-dev-ingest-api]
+aws_cloudwatch_log_group.http_api_access: Refreshing state... [id=/aws/apigateway/footwatch-dev-http-api]
+aws_cloudwatch_log_group.worker: Refreshing state... [id=/aws/lambda/footwatch-dev-worker]
+aws_apigatewayv2_api.http_api: Refreshing state... [id=va76meg87j]
+aws_sqs_queue.violation_dlq: Refreshing state... [id=https://sqs.ap-south-1.amazonaws.com/769213333967/footwatch-dev-violation-dlq]
+aws_dynamodb_table.idempotency_records: Refreshing state... [id=footwatch-dev-idempotency-records]
+aws_dynamodb_table.camera_live_state: Refreshing state... [id=footwatch-dev-camera-live-state]
+aws_dynamodb_table.violations: Refreshing state... [id=footwatch-dev-violations]
+data.aws_iam_policy_document.lambda_assume_role: Read complete after 0s [id=2690255455]
+aws_cloudwatch_log_group.query_api: Refreshing state... [id=/aws/lambda/footwatch-dev-query-api]
+data.aws_caller_identity.current[0]: Read complete after 0s [id=769213333967]
+aws_iam_role.lambda_exec: Refreshing state... [id=footwatch-dev-lambda-exec]
+aws_s3_bucket.evidence: Refreshing state... [id=footwatch-dev-evidence-769213333967]
+aws_apigatewayv2_stage.default: Refreshing state... [id=$default]
+aws_cloudwatch_metric_alarm.dlq_has_messages: Refreshing state... [id=footwatch-dev-dlq-has-messages]
+aws_sqs_queue.violation_ingest_queue: Refreshing state... [id=https://sqs.ap-south-1.amazonaws.com/769213333967/footwatch-dev-violation-ingest-queue]
+aws_sqs_queue_redrive_allow_policy.violation_dlq: Refreshing state... [id=https://sqs.ap-south-1.amazonaws.com/769213333967/footwatch-dev-violation-dlq]
+aws_cloudwatch_metric_alarm.queue_visible_messages_high: Refreshing state... [id=footwatch-dev-queue-visible-messages-high]
+aws_s3_bucket_ownership_controls.evidence: Refreshing state... [id=footwatch-dev-evidence-769213333967]
+aws_s3_bucket_public_access_block.evidence: Refreshing state... [id=footwatch-dev-evidence-769213333967]
+aws_s3_bucket_server_side_encryption_configuration.evidence: Refreshing state... [id=footwatch-dev-evidence-769213333967]
+aws_s3_bucket_versioning.evidence: Refreshing state... [id=footwatch-dev-evidence-769213333967]
+data.aws_iam_policy_document.evidence_bucket_tls_only: Reading...
+aws_s3_bucket_lifecycle_configuration.evidence: Refreshing state... [id=footwatch-dev-evidence-769213333967]
+data.aws_iam_policy_document.lambda_access: Reading...
+data.aws_iam_policy_document.evidence_bucket_tls_only: Read complete after 0s [id=768168745]
+aws_s3_bucket_policy.evidence_tls_only: Refreshing state... [id=footwatch-dev-evidence-769213333967]
+data.aws_iam_policy_document.lambda_access: Read complete after 0s [id=2561502490]
+aws_iam_policy.lambda_access: Refreshing state... [id=arn:aws:iam::769213333967:policy/footwatch-dev-lambda-access]
+aws_iam_role_policy_attachment.lambda_access: Refreshing state... [id=footwatch-dev-lambda-exec-20260420104325935300000001]
+aws_lambda_function.ingest_api: Refreshing state... [id=footwatch-dev-ingest-api]
+aws_lambda_function.worker: Refreshing state... [id=footwatch-dev-worker]
+aws_lambda_function.query_api: Refreshing state... [id=footwatch-dev-query-api]
+aws_lambda_permission.apigw_invoke_ingest: Refreshing state... [id=AllowExecutionFromApiGatewayIngest]
+aws_lambda_permission.apigw_invoke_query: Refreshing state... [id=AllowExecutionFromApiGatewayQuery]
+aws_apigatewayv2_integration.ingest_api: Refreshing state... [id=geptzt5]
+aws_apigatewayv2_integration.query_api: Refreshing state... [id=yk31z1l]
+aws_lambda_event_source_mapping.worker_queue: Refreshing state... [id=504da797-0320-4972-a4f8-b0f08a628b0d]
+aws_apigatewayv2_route.ingest_proxy: Refreshing state... [id=eqxr6v4]
+aws_apigatewayv2_route.query_proxy: Refreshing state... [id=n8qi5sl]
+
+No changes. Your infrastructure matches the configuration.
+
+Terraform has compared your real infrastructure against your configuration
+and found no differences, so no changes are needed.

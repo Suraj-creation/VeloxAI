@@ -1,0 +1,22 @@
+{
+  "detection_confidence": 0.45,
+  "nms_iou": 0.50,
+  "min_bbox_area_px": 1500,
+  "detection_input_size": 320,
+
+  "speed_threshold_kmph": 5.0,
+
+  "tracker_max_age": 30,
+  "tracker_min_hits": 3,
+  "tracker_iou_threshold": 0.50,
+
+  "lp_localiser_conf": 0.30,
+  "min_plate_px_width": 80,
+
+  "min_ocr_confidence": 0.65,
+  "manual_review_min_conf": 0.40,
+
+  "cooldown_sec": 60,
+
+  "schema_version": "v1"
+}

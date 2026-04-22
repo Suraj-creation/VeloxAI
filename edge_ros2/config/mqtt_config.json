@@ -1,0 +1,16 @@
+{
+  "broker_host": "YOUR-ENDPOINT.iot.ap-south-1.amazonaws.com",
+  "broker_port": 8883,
+  "client_id": "fw-edge-001",
+  "cert_dir": "/certs",
+  "ca_cert": "root-CA.crt",
+  "device_cert": "device.cert.pem",
+  "private_key": "device.private.key",
+  "keep_alive": 60,
+
+  "_dev_override_": {
+    "note": "For local dev testing, set broker_host to localhost and broker_port to 1883. Remove ca_cert to skip TLS.",
+    "broker_host": "localhost",
+    "broker_port": 1883
+  }
+}

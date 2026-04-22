@@ -1,0 +1,21 @@
+# CycloneDDS configuration for ROS2 DDS discovery
+# Placed at CYCLONEDDS_URI path inside container
+<CycloneDDS>
+  <Domain>
+    <General>
+      <Interfaces>
+        <NetworkInterface name="eth0" priority="default" multicast="default"/>
+        <NetworkInterface name="wlan0" priority="default" multicast="default"/>
+      </Interfaces>
+    </General>
+    <Discovery>
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>20</MaxAutoParticipantIndex>
+    </Discovery>
+    <Internal>
+      <Watermarks>
+        <WhcHigh>8MB</WhcHigh>
+      </Watermarks>
+    </Internal>
+  </Domain>
+</CycloneDDS>

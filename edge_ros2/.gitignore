@@ -1,0 +1,74 @@
+# Footwatch Edge Runtime — .gitignore
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ROS2 build artifacts
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+
+# Models (large binary files — pull separately with script)
+models/*.pt
+models/*.onnx
+models/*.tflite
+models/hf_cache/
+models/paddleocr_det/
+models/paddleocr_rec/
+models/paddleocr_cls/
+
+# Evidence and violations (live data — not committed)
+violations/
+!violations/.gitkeep
+
+# Logs
+logs/
+!logs/.gitkeep
+
+# Certificates (never commit certs)
+certs/*.pem
+certs/*.crt
+certs/*.key
+!certs/.gitkeep
+
+# AWS config with real credentials
+config/mqtt_config.prod.json
+
+# Test caches
+.pytest_cache/
+*.pytest_cache
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+.docker/
+
+# Preview frame (live runtime artifact)
+violations/.preview.jpg
+violations/.preview.tmp.jpg
+violations/mqtt_spool.db
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini

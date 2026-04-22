@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["violation_id", "timestamp", "location", "vehicle", "violation_status"],
+  "properties": {
+    "violation_id": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "location": { "type": "object" },
+    "vehicle": { "type": "object" },
+    "violation_status": { "type": "string" },
+    "review_required": { "type": "boolean" },
+    "review_reason": { "type": ["string", "null"] },
+    "evidence_status": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true
+}

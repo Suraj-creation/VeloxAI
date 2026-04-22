@@ -1,0 +1,7 @@
+{
+  "pixels_per_metre": 47.0,
+  "camera_fps": 10.0,
+  "calibration_date": "2026-04-17",
+  "calibration_note": "Measured with 1m tape at camera height 4m, angle 30deg",
+  "calibration_operator": "footwatch_installer"
+}
