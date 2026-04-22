@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { AppShell } from '@/app/layout/AppShell'
+import { ChallanPanel } from '@/modules/violations/components/ChallanPanel'
 import { EvidenceViewer } from '@/modules/violations/components/EvidenceViewer'
 import { ViolationDetailPanel } from '@/modules/violations/components/ViolationDetailPanel'
 import { useViolationDetailsQuery } from '@/modules/violations/hooks/useViolationDetailsQuery'
@@ -12,16 +13,16 @@ export function ViolationDetailsPage() {
   return (
     <AppShell>
       <div className="row" style={{ marginBottom: '0.5rem' }}>
-        <Link to="/violations" className="btn-ghost">← Back to Violations</Link>
+        <Link to="/violations" className="btn-ghost">Back to Violations</Link>
       </div>
 
       <section className="section-card">
         <div className="section-header">
-          <span className="section-icon">📋</span>
+          <span className="section-icon">Violation</span>
           <h2 style={{ marginBottom: 0 }}>Violation Details</h2>
-          {query.data && (
+          {query.data ? (
             <span className="pill" style={{ marginLeft: 'auto' }}>{query.data.violation_id.slice(0, 8)}</span>
-          )}
+          ) : null}
         </div>
 
         <DataState
@@ -31,10 +32,13 @@ export function ViolationDetailsPage() {
           emptyMessage="Violation record not found."
         >
           {query.data ? (
-            <div className="detail-grid">
-              <ViolationDetailPanel violation={query.data} />
-              <EvidenceViewer violationId={query.data.violation_id} />
-            </div>
+            <>
+              <div className="detail-grid">
+                <ViolationDetailPanel violation={query.data} />
+                <EvidenceViewer violationId={query.data.violation_id} />
+              </div>
+              <ChallanPanel violation={query.data} />
+            </>
           ) : null}
         </DataState>
       </section>

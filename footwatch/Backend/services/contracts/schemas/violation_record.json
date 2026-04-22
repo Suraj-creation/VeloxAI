@@ -11,6 +11,25 @@
     "review_required": { "type": "boolean" },
     "review_reason": { "type": ["string", "null"] },
     "evidence_status": { "type": "string" },
+    "challan": {
+      "type": ["object", "null"],
+      "properties": {
+        "status": { "type": "string" },
+        "download_ready": { "type": "boolean" },
+        "fine_amount_inr": { "type": "number" },
+        "provider": { "type": ["string", "null"] },
+        "model": { "type": ["string", "null"] },
+        "generated_at": { "type": "string", "format": "date-time" },
+        "manual_review_reason": { "type": ["string", "null"] },
+        "evidence_image_type": { "type": ["string", "null"] },
+        "evidence_image_path": { "type": ["string", "null"] },
+        "pdf_path": { "type": ["string", "null"] },
+        "json_path": { "type": ["string", "null"] },
+        "generation_error": { "type": ["string", "null"] },
+        "semantic_record": { "type": ["object", "null"] }
+      },
+      "additionalProperties": true
+    },
     "created_at": { "type": "string", "format": "date-time" },
     "updated_at": { "type": "string", "format": "date-time" }
   },

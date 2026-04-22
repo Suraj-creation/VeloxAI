@@ -1,34 +1,16 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from services.common.config import load_settings
+from services.common.local_violation_store import LocalViolationStore
 
 
 class ViolationsReadRepository:
     def __init__(self) -> None:
-        settings = load_settings()
-        self._path: Path = settings.local_data_dir / "violations.jsonl"
-
-    def _load_all(self) -> List[Dict[str, Any]]:
-        if not self._path.exists():
-            return []
-
-        items: List[Dict[str, Any]] = []
-        with self._path.open("r", encoding="utf-8") as handle:
-            for line in handle:
-                line = line.strip()
-                if not line:
-                    continue
-                items.append(json.loads(line))
-
-        items.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
-        return items
+        self._store = LocalViolationStore()
 
     def list_all(self, limit: int = 50, filters: Optional[Dict[str, str]] = None) -> List[Dict[str, Any]]:
-        items = self._load_all()
+        items = self._store.list_all()
 
         if filters:
             camera_id = filters.get("camera_id")
@@ -67,13 +49,10 @@ class ViolationsReadRepository:
         return items[:limit]
 
     def by_id(self, violation_id: str) -> Optional[Dict[str, Any]]:
-        for item in self.list_all(limit=10_000):
-            if item.get("violation_id") == violation_id:
-                return item
-        return None
+        return self._store.get(violation_id)
 
     def summary(self) -> Dict[str, Any]:
-        items = self._load_all()
+        items = self._store.list_all()
         if not items:
             return {
                 "total_violations": 0,

@@ -1,8 +1,8 @@
+import { Violation } from '@/modules/violations/types/violation'
 import { Badge } from '@/shared/components/Badge'
 import { formatDateTime } from '@/shared/utils/date'
 import { formatPlate } from '@/shared/utils/plate'
 import { formatSpeed } from '@/shared/utils/speed'
-import { Violation } from '@/modules/violations/types/violation'
 
 type ViolationDetailPanelProps = {
   violation: Violation
@@ -17,7 +17,7 @@ const fields = (v: Violation) => [
   { label: 'Track ID', value: v.vehicle.track_id ?? 'N/A' },
   { label: 'Camera', value: v.location.camera_id ?? 'N/A' },
   { label: 'Location', value: v.location.location_name ?? 'N/A' },
-  { label: 'Fine Amount', value: `₹${v.fine_amount_inr}` },
+  { label: 'Fine Amount', value: `INR ${v.fine_amount_inr}` },
   { label: 'Status', value: v.violation_status },
 ]
 
@@ -28,7 +28,7 @@ export function ViolationDetailPanel({ violation }: ViolationDetailPanelProps) {
   return (
     <section className="section-card" id="violation-detail-panel">
       <div className="section-header">
-        <span className="section-icon">📋</span>
+        <span className="section-icon">Metadata</span>
         <h3>Violation Metadata</h3>
       </div>
 
@@ -50,7 +50,7 @@ export function ViolationDetailPanel({ violation }: ViolationDetailPanelProps) {
         <div className="detail-row">
           <span className="detail-label">Plate Format</span>
           <Badge tone={plateValid ? 'success' : 'danger'}>
-            {plateValid ? '✓ Valid' : '✗ Invalid'}
+            {plateValid ? 'Valid' : 'Invalid'}
           </Badge>
         </div>
       </div>
@@ -58,7 +58,7 @@ export function ViolationDetailPanel({ violation }: ViolationDetailPanelProps) {
       <div className="divider" />
 
       <div className="section-header" style={{ marginBottom: '0.5rem' }}>
-        <span className="section-icon">🤖</span>
+        <span className="section-icon">Models</span>
         <h3 style={{ fontSize: '0.85rem' }}>ML Pipeline Info</h3>
       </div>
       <div className="grid gap-xs">

@@ -33,6 +33,8 @@
     "evidence": {
       "type": "object",
       "properties": {
+        "vehicle_highlighted": { "type": "string" },
+        "annotated_frame": { "type": "string" },
         "full_frame": { "type": "string" },
         "plate_crop_raw": { "type": "string" },
         "plate_crop_enhanced": { "type": "string" },

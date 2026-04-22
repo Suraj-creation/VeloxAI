@@ -5,13 +5,14 @@ from typing import Any, Dict, Optional
 
 from fastapi import Body, FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from services.common.errors import ApiError
 from services.common.response import ok
 from services.query_api.handlers.get_edge_config import handle_get_edge_config
 from services.query_api.handlers.get_edge_runtime_status import handle_get_edge_runtime_status
 from services.query_api.handlers.get_alerts import handle_get_alerts
+from services.query_api.handlers.get_challan_download import handle_get_challan_download
 from services.query_api.handlers.get_evidence_url import handle_get_evidence_url
 from services.query_api.handlers.get_live_cameras import handle_get_live_cameras
 from services.query_api.handlers.get_violation_details import handle_get_violation_details
@@ -99,6 +100,16 @@ def list_alerts(limit: int = Query(default=20, ge=1, le=100)):
 def get_violation_details(violation_id: str):
     request_id = str(uuid.uuid4())
     return ok(handle_get_violation_details(violations_repo, violation_id), request_id)
+
+
+@app.get("/v1/violations/{violation_id}/challan-download")
+def get_violation_challan_download(violation_id: str):
+    path = handle_get_challan_download(violations_repo, violation_id)
+    return FileResponse(
+        path=path,
+        media_type="application/pdf",
+        filename=f"{violation_id}-challan.pdf",
+    )
 
 
 @app.get("/v1/violations/{violation_id}/evidence-url")
